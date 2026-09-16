@@ -28,6 +28,7 @@ JavaScript development, data validation, GitHub, and deployment on Upsun.
 - Searchable ticket table with pagination.
 - Sample CSV download and validated CSV import.
 - Responsive layout for desktop and mobile.
+- ditable resolution targets by priority, with immediate overdue recalculation.
 
 ## Technology
 
@@ -91,3 +92,4 @@ Refreshing restores the fictional demo data.
 - Configurable resolution targets.
 - Prior-period comparisons with clearly defined date ranges.
 - Dashboard screenshot and a short demonstration walkthrough.
+- editable elapsed-time targets, with defaults of
