@@ -29,6 +29,7 @@ JavaScript development, data validation, GitHub, and deployment on Upsun.
 - Sample CSV download and validated CSV import.
 - Responsive layout for desktop and mobile.
 - ditable resolution targets by priority, with immediate overdue recalculation.
+- Overdue-only ticket filtering that works with search and editable resolution targets.
 
 ## Technology
 
