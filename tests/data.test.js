@@ -29,3 +29,30 @@ test('CSV rejects malformed and future dates and unclosed quotes', () => {
   assert.throws(() => parseCSV(toCSV([row]), now), /valid UTC/);
   assert.throws(() => parseCSV('"unclosed', now), /unclosed/);
 });
+
+test('custom targets change only overdue count and keep strict boundaries', () => {
+  const rows = ['Critical', 'High', 'Normal', 'Low'].map((priority, i) => ({
+    ...demoData(now)[0], id: String(i), priority, status: 'Pending',
+    created_at: new Date(now - 10 * hour).toISOString(), resolved_at: ''
+  }));
+  const base = metrics(rows, now);
+  const equal = {Critical:10,High:10,Normal:10,Low:10};
+  assert.equal(metrics(rows, now, equal).overdue, 0);
+  const custom = metrics(rows, now, {...equal, High: 9.5});
+  assert.deepEqual(custom, {...base, overdue:1});
+  assert.equal(metrics(rows, now, {Critical:0.1,High:0.1,Normal:0.1,Low:0.1}).overdue, 4);
+  assert.equal(metrics(rows, now, {Critical:8760,High:8760,Normal:8760,Low:8760}).overdue, 0);
+  assert.deepEqual(metrics(rows, now), base);
+});
+test('invalid custom targets cannot silently misclassify tickets', () => {
+  for (const value of [0, -1, NaN, Infinity, 8761, '', '24', null]) {
+    assert.throws(() => metrics([], now, {Critical:value,High:24,Normal:72,Low:120}), /resolution target/);
+  }
+  assert.throws(() => metrics([], now, {}), /resolution target/);
+});
+test('targets apply to imported and filtered tickets and exclude resolved tickets', () => {
+  const rows = parseCSV(toCSV(demoData(now)), now).filter(r => r.product === 'Admissions');
+  const result = metrics(rows, now, {Critical:0.1,High:0.1,Normal:0.1,Low:0.1});
+  assert.equal(result.overdue, rows.filter(r => r.status !== 'Resolved').length);
+});
+

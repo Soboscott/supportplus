@@ -9,10 +9,16 @@ export function demoData(now = Date.now()) {
     return { id: `SP-${1001 + i}`, subject: ['Unable to sign in', 'Report totals differ', 'Update workflow settings', 'Invoice question', 'Sync needs attention'][i % 5], product: ['Admissions', 'Student Management', 'Payments'][i % 3], priority: ['Normal', 'High', 'Low', 'Normal', 'Critical', 'Normal', 'High'][i % 7], status: closed ? 'Resolved' : i % 2 ? 'Open' : 'Pending', category, created_at: new Date(created).toISOString(), resolved_at: closed ? new Date(Math.min(now, created + (i % 36 + 1) * hour)).toISOString() : '' };
   });
 }
-export function metrics(rows, now = Date.now()) {
+export function validTarget(value) {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0.1 && value <= 8760;
+}
+export function metrics(rows, now = Date.now(), resolutionTargets = targets) {
+  if (Object.keys(targets).some(priority => !validTarget(resolutionTargets?.[priority]))) {
+    throw new Error('Each resolution target must be between 0.1 and 8760 hours.');
+  }
   const open = rows.filter(r => r.status !== 'Resolved');
   const closed = rows.filter(r => r.status === 'Resolved');
-  return { total: rows.length, open: open.length, overdue: open.filter(r => (now - Date.parse(r.created_at)) / hour > targets[r.priority]).length, average: closed.length ? closed.reduce((sum, r) => sum + (Date.parse(r.resolved_at) - Date.parse(r.created_at)) / hour, 0) / closed.length : null, aging: [open.filter(r => now - Date.parse(r.created_at) < 24 * hour).length, open.filter(r => now - Date.parse(r.created_at) >= 24 * hour && now - Date.parse(r.created_at) < 72 * hour).length, open.filter(r => now - Date.parse(r.created_at) >= 72 * hour && now - Date.parse(r.created_at) < 168 * hour).length, open.filter(r => now - Date.parse(r.created_at) >= 168 * hour).length] };
+  return { total: rows.length, open: open.length, overdue: open.filter(r => (now - Date.parse(r.created_at)) / hour > resolutionTargets[r.priority]).length, average: closed.length ? closed.reduce((sum, r) => sum + (Date.parse(r.resolved_at) - Date.parse(r.created_at)) / hour, 0) / closed.length : null, aging: [open.filter(r => now - Date.parse(r.created_at) < 24 * hour).length, open.filter(r => now - Date.parse(r.created_at) >= 24 * hour && now - Date.parse(r.created_at) < 72 * hour).length, open.filter(r => now - Date.parse(r.created_at) >= 72 * hour && now - Date.parse(r.created_at) < 168 * hour).length, open.filter(r => now - Date.parse(r.created_at) >= 168 * hour).length] };
 }
 export function parseCSV(text, now = Date.now()) {
   const rows = []; let row = [], value = '', quoted = false, afterQuote = false;
@@ -55,3 +61,4 @@ export function parseCSV(text, now = Date.now()) {
 export function toCSV(rows) {
   return columns.join(',') + '\r\n' + rows.map(r => columns.map(c => '"' + String(r[c]).replaceAll('"', '""') + '"').join(',')).join('\r\n');
 }
+
