@@ -1,9 +1,0 @@
-{
-  "name": "supportpulse",
-  "version": "0.1.0",
-  "private": true,
-  "type": "module",
-  "description": "A browser-based support operations dashboard",
-  "scripts": { "start": "node server.mjs", "dev": "node server.mjs", "test": "node --test" },
-  "engines": { "node": ">=22" }
-}
