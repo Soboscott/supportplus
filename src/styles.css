@@ -7,3 +7,9 @@
 .target-panel #targets-status.target-error{color:#a9342c}
 @media(max-width:540px){.target-controls label{flex-basis:40%}.target-controls button{width:100%}}
 
+
+.explorer-controls{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.table-heading .overdue-toggle{display:flex;flex-direction:row;align-items:center;gap:8px;width:auto;min-height:42px;margin:0;cursor:pointer;color:#183e5d}
+.overdue-toggle input{width:18px;height:18px;min-height:0;padding:0;margin:0;accent-color:#123b6d;flex-shrink:0}
+@media(max-width:540px){.explorer-controls{width:100%;gap:4px;margin-bottom:16px}.explorer-controls>label:not(.overdue-toggle){width:100%;margin-bottom:4px}}
+

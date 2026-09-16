@@ -1,11 +1,11 @@
-import { demoData, metrics, parseCSV, toCSV, targets, validTarget } from './data.js';
+import { demoData, metrics, parseCSV, toCSV, targets, validTarget, filterExplorer } from './data.js';
 const $ = id => document.getElementById(id);
 let rows = demoData(), page = 0;
 const size = 20;
 let activeTargets = { ...targets };
 function element(tag, text, cls) { const el = document.createElement(tag); if (text !== undefined) el.textContent = text; if (cls) el.className = cls; return el; }
 function products() { $('product').replaceChildren(new Option('All products', '')); [...new Set(rows.map(r => r.product))].sort().forEach(p => $('product').add(new Option(p, p))); }
-function reset() { ['product', 'priority', 'from', 'to', 'search'].forEach(id => $(id).value = ''); page = 0; }
+function reset() { ['product', 'priority', 'from', 'to', 'search'].forEach(id => $(id).value = ''); $('overdue-only').checked = false; page = 0; }
 function bars(id, pairs) {
   const root = $(id); root.replaceChildren();
   if (!pairs.length) { root.append(element('p', 'No tickets match these filters.', 'empty')); return; }
@@ -19,22 +19,24 @@ function render() {
   if (invalidRange) { $('message').textContent = 'Choose an end date on or after the start date.'; $('message').dataset.range = 'true'; }
   else if ($('message').dataset.range) { $('message').textContent = ''; delete $('message').dataset.range; }
   const data = rows.filter(r => !invalidRange && (!$('product').value || r.product === $('product').value) && (!$('priority').value || r.priority === $('priority').value) && (!$('from').value || r.created_at.slice(0, 10) >= $('from').value) && (!$('to').value || r.created_at.slice(0, 10) <= $('to').value));
-  const m = metrics(data, Date.now(), activeTargets);
+  const now = Date.now();
+  const m = metrics(data, now, activeTargets);
   $('metrics').replaceChildren();
   [['Tickets in selection', m.total, 'Filtered by creation date'], ['Open backlog', m.open, 'Open and pending tickets'], ['Overdue tickets', m.overdue, 'Unresolved, past selected target'], ['Avg. resolution', m.average === null ? '—' : `${m.average.toFixed(1)}h`, 'Resolved tickets in selection']].forEach(([label, value, hint], i) => { const card = element('article', undefined, 'metric' + (i === 2 ? ' warning' : '')); card.append(element('p', label), element('strong', value), element('small', hint)); $('metrics').append(card); });
   bars('volume', grouped(data, r => r.created_at.slice(0, 10)).sort((a, b) => a[0].localeCompare(b[0])));
   bars('categories', grouped(data, r => r.category).sort((a, b) => b[1] - a[1]));
   $('aging').replaceChildren(); m.aging.forEach((n, i) => { const card = element('div'); card.append(element('strong', n), element('span', ['Under 1 day', '1–3 days', '3–7 days', '7+ days'][i])); $('aging').append(card); });
   const query = $('search').value.toLowerCase();
-  const visible = data.filter(r => [r.id, r.subject, r.category].some(v => v.toLowerCase().includes(query))).sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
+  const overdueOnly = $('overdue-only').checked;
+  const visible = filterExplorer(data, query, overdueOnly, now, activeTargets);
   page = Math.min(page, Math.max(0, Math.ceil(visible.length / size) - 1));
-  $('count').textContent = `${visible.length} tickets • Search applies to this table only`;
+  $('count').textContent = `${visible.length} ${overdueOnly ? 'overdue tickets' : 'tickets'} • Search and Overdue only apply to this table only`;
   $('tickets').replaceChildren();
   visible.slice(page * size, (page + 1) * size).forEach(r => {
     const tr = element('tr'), subject = element('td'); subject.append(element('strong', r.id), element('span', r.subject)); tr.append(subject, element('td', r.product));
     const priority = element('td'); priority.append(element('span', r.priority, 'badge ' + r.priority.toLowerCase())); tr.append(priority, element('td', r.status), element('td', r.created_at.slice(0, 10))); $('tickets').append(tr);
   });
-  if (!visible.length) { const tr = element('tr'), td = element('td', 'No tickets match. Try resetting your filters.', 'empty'); td.colSpan = 5; tr.append(td); $('tickets').append(tr); }
+  if (!visible.length) { const tr = element('tr'), td = element('td', overdueOnly ? 'No overdue tickets match. Adjust your search, filters, or targets, or turn off Overdue only.' : 'No tickets match. Try resetting your filters.', 'empty'); td.colSpan = 5; tr.append(td); $('tickets').append(tr); }
   $('page').textContent = `Page ${page + 1} of ${Math.max(1, Math.ceil(visible.length / size))}`;
   $('prev').disabled = page === 0; $('next').disabled = (page + 1) * size >= visible.length;
 }
@@ -106,6 +108,23 @@ function setupTargets() {
   $('metrics').before(panel);
   document.querySelector('footer').textContent = 'CSV files are processed in your browser and are not uploaded. Refreshing restores demo data and default resolution targets. Overdue tickets use the selected elapsed-hour targets above; these are not business-hour SLAs.';
 }
+function setupExplorerFilter() {
+  const searchLabel = $('search').closest('label');
+  const controls = element('div', undefined, 'explorer-controls');
+  searchLabel.before(controls);
+  const label = element('label', undefined, 'overdue-toggle');
+  const input = element('input');
+  input.type = 'checkbox'; input.id = 'overdue-only';
+  input.setAttribute('aria-controls', 'tickets');
+  input.setAttribute('aria-describedby', 'count');
+  input.addEventListener('change', () => { page = 0; render(); });
+  label.append(input, element('span', 'Overdue only'));
+  controls.append(searchLabel, label);
+  $('count').setAttribute('role', 'status');
+  $('count').setAttribute('aria-live', 'polite');
+}
+setupExplorerFilter();
 setupTargets();
 products(); render();
+
 

@@ -12,13 +12,24 @@ export function demoData(now = Date.now()) {
 export function validTarget(value) {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0.1 && value <= 8760;
 }
+export function isOverdue(ticket, now = Date.now(), resolutionTargets = targets) {
+  return ticket.status !== 'Resolved' &&
+    (now - Date.parse(ticket.created_at)) / hour > resolutionTargets[ticket.priority];
+}
+export function filterExplorer(rows, query = '', overdueOnly = false, now = Date.now(), resolutionTargets = targets) {
+  const search = query.trim().toLowerCase();
+  return rows.filter(ticket =>
+    (!overdueOnly || isOverdue(ticket, now, resolutionTargets)) &&
+    [ticket.id, ticket.subject, ticket.category].some(value => value.toLowerCase().includes(search))
+  ).sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
+}
 export function metrics(rows, now = Date.now(), resolutionTargets = targets) {
   if (Object.keys(targets).some(priority => !validTarget(resolutionTargets?.[priority]))) {
     throw new Error('Each resolution target must be between 0.1 and 8760 hours.');
   }
   const open = rows.filter(r => r.status !== 'Resolved');
   const closed = rows.filter(r => r.status === 'Resolved');
-  return { total: rows.length, open: open.length, overdue: open.filter(r => (now - Date.parse(r.created_at)) / hour > resolutionTargets[r.priority]).length, average: closed.length ? closed.reduce((sum, r) => sum + (Date.parse(r.resolved_at) - Date.parse(r.created_at)) / hour, 0) / closed.length : null, aging: [open.filter(r => now - Date.parse(r.created_at) < 24 * hour).length, open.filter(r => now - Date.parse(r.created_at) >= 24 * hour && now - Date.parse(r.created_at) < 72 * hour).length, open.filter(r => now - Date.parse(r.created_at) >= 72 * hour && now - Date.parse(r.created_at) < 168 * hour).length, open.filter(r => now - Date.parse(r.created_at) >= 168 * hour).length] };
+  return { total: rows.length, open: open.length, overdue: open.filter(r => isOverdue(r, now, resolutionTargets)).length, average: closed.length ? closed.reduce((sum, r) => sum + (Date.parse(r.resolved_at) - Date.parse(r.created_at)) / hour, 0) / closed.length : null, aging: [open.filter(r => now - Date.parse(r.created_at) < 24 * hour).length, open.filter(r => now - Date.parse(r.created_at) >= 24 * hour && now - Date.parse(r.created_at) < 72 * hour).length, open.filter(r => now - Date.parse(r.created_at) >= 72 * hour && now - Date.parse(r.created_at) < 168 * hour).length, open.filter(r => now - Date.parse(r.created_at) >= 168 * hour).length] };
 }
 export function parseCSV(text, now = Date.now()) {
   const rows = []; let row = [], value = '', quoted = false, afterQuote = false;
@@ -61,4 +72,5 @@ export function parseCSV(text, now = Date.now()) {
 export function toCSV(rows) {
   return columns.join(',') + '\r\n' + rows.map(r => columns.map(c => '"' + String(r[c]).replaceAll('"', '""') + '"').join(',')).join('\r\n');
 }
+
 

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { demoData, metrics, parseCSV, toCSV, hour } from '../src/data.js';
+import { demoData, metrics, parseCSV, toCSV, hour, isOverdue, filterExplorer } from '../src/data.js';
 const now = Date.parse('2026-09-16T12:00:00Z');
 test('CSV handles commas, quotes, and multiline subjects', () => {
   const rows = demoData(now); rows[0].subject = 'Report, "totals"\nneed review';
@@ -54,5 +54,30 @@ test('targets apply to imported and filtered tickets and exclude resolved ticket
   const rows = parseCSV(toCSV(demoData(now)), now).filter(r => r.product === 'Admissions');
   const result = metrics(rows, now, {Critical:0.1,High:0.1,Normal:0.1,Low:0.1});
   assert.equal(result.overdue, rows.filter(r => r.status !== 'Resolved').length);
+});
+
+
+test('overdue filter excludes resolved tickets and respects exact and fractional boundaries', () => {
+  const base = {...demoData(now)[0], priority:'High', created_at:new Date(now-24*hour).toISOString(), resolved_at:''};
+  assert.equal(isOverdue({...base, status:'Open'}, now), false);
+  assert.equal(isOverdue({...base, status:'Pending'}, now+1), true);
+  assert.equal(isOverdue({...base, status:'Resolved'}, now+hour), false);
+  assert.equal(isOverdue({...base, status:'Open'}, now, {High:23.5}), true);
+});
+test('explorer combines overdue, search, and an already filtered cohort without mutating it', () => {
+  const rows = parseCSV(toCSV(demoData(now)), now).filter(r => r.product === 'Admissions');
+  const original = structuredClone(rows);
+  const expected = rows.filter(r => r.status !== 'Resolved' && (now-Date.parse(r.created_at))/hour > ({Critical:4,High:24,Normal:72,Low:120})[r.priority]);
+  assert.equal(filterExplorer(rows, '', true, now).length, expected.length);
+  assert.equal(filterExplorer(rows, '', true, now).length, metrics(rows,now).overdue);
+  const selected = expected[0];
+  assert.deepEqual(filterExplorer(rows, '  '+selected.id.toLowerCase()+'  ', true, now), [selected]);
+  assert.equal(filterExplorer(rows, 'missing-ticket', true, now).length, 0);
+  assert.equal(filterExplorer(rows, '', false, now).length, rows.length);
+  const large = {Critical:8760,High:8760,Normal:8760,Low:8760};
+  assert.equal(filterExplorer(rows, '', true, now, large).length, 0);
+  const small = {Critical:0.1,High:0.1,Normal:0.1,Low:0.1};
+  assert.equal(filterExplorer(rows, '', true, now, small).length, rows.filter(r=>r.status!=='Resolved').length);
+  assert.deepEqual(rows, original);
 });
 
