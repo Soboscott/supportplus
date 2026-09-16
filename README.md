@@ -2,6 +2,8 @@
 
 [Launch the live dashboard](https://main-bvxea6i-iiefw5742r2qm.us-2.platformsh.site/)
 
+![SupportPulse dashboard showing ticket metrics, demand charts, and backlog aging](supportpulse-dashboard.png)
+
 A support operations dashboard for exploring ticket demand, backlog,
 aging, and resolution time. Try 120 fictional tickets or import the
 included sample CSV. No login required.
