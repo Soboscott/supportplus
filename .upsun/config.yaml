@@ -1,0 +1,19 @@
+applications:
+  supportpulse:
+    source:
+      root: "/"
+    type: "nodejs:24"
+    build:
+      flavor: none
+    web:
+      commands:
+        start: "node server.mjs"
+      locations:
+        "/":
+          allow: false
+          passthru: true
+
+routes:
+  "https://{default}/":
+    type: upstream
+    upstream: "supportpulse:http"
