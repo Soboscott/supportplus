@@ -1,6 +1,6 @@
 # SupportPulse
 
-[Launch the live dashboard](https://main-bvxea6i-iiefw5742r2qm.us-2.platformsh.site/)
+[Launch the live dashboard](https://soboscott.github.io/supportplus/)
 
 ![SupportPulse dashboard showing ticket metrics, demand charts, and backlog aging](supportpulse-dashboard.png)
 
@@ -34,7 +34,7 @@ JavaScript development, data validation, GitHub, and deployment on Upsun.
 ## Technology
 
 HTML, CSS, JavaScript, and a Node.js server with no third-party
-dependencies. Hosted on Upsun with GitHub-connected deployment.
+dependencies. Hosted on GitHub Pages/GitHub Actions with GitHub-connected deployment.
 
 ## Run locally
 
@@ -86,7 +86,7 @@ Refreshing restores the fictional demo data.
 - `src/data.js`: demo data, CSV validation, and metrics
 - `server.mjs`: Node.js web server
 - `tests/data.test.js`: automated tests
-- `.upsun/config.yaml`: deployment configuration
+- `.upsun/config.yaml`: deployment configuration - later removed after canceling my Upsun account
 
 ## Next milestones
 
